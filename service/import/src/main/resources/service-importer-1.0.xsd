@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Copyright (c) 2020 Inyiama Kossy
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://andrea.com/schema/si"
+           xmlns:si="http://andrea.com/schema/si"
+           targetNamespace="http://andrea.com/schema/si"
+           elementFormDefault="qualified"
+           version="1.0">
+
+    <xs:element name="si">
+        <xs:annotation>
+            <xs:documentation><![CDATA[The root element in the document.]]></xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="converter" minOccurs="0" maxOccurs="unbounded" type="converterType"/>
+                <xs:element name="class" minOccurs="0" maxOccurs="unbounded" type="classType">
+                    <xs:unique name="unique-property">
+                        <xs:selector xpath="si:property"/>
+                        <xs:field xpath="@name"/>
+                    </xs:unique>
+                </xs:element>
+                <xs:element name="include" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:attribute name="file" use="required" type="requiredStringType"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:unique name="unique-converter-name">
+            <xs:selector xpath="si:converter"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+        <xs:unique name="unique-converter-value">
+            <xs:selector xpath="si:converter"/>
+            <xs:field xpath="@value"/>
+        </xs:unique>
+        <xs:unique name="unique-class">
+            <xs:selector xpath="si:class"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+        <xs:unique name="unique-include">
+            <xs:selector xpath="si:include"/>
+            <xs:field xpath="@file"/>
+        </xs:unique>
+    </xs:element>
+
+    <xs:complexType name="converterType">
+        <xs:attribute name="name" type="xs:string">
+            <xs:annotation>
+                <xs:documentation><![CDATA[The name of the converter. It defaults to the FQN of the converter class.]]></xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="value" use="required" type="requiredStringType">
+            <xs:annotation>
+                <xs:documentation><![CDATA[The FQN of the converter class.]]></xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="classType">
+        <xs:sequence>
+            <xs:element name="property" maxOccurs="unbounded" type="propertyType">
+                <xs:annotation>
+                    <xs:documentation><![CDATA[A property of the class.]]></xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" use="required" type="requiredStringType">
+            <xs:annotation>
+                <xs:documentation><![CDATA[
+                The fully qualified name of the class to be mapped.
+                The properties of the class to be mapped must have setters and getters matching
+                the properties of the class.]]>
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="propertyType">
+        <xs:sequence>
+            <xs:element name="columns" minOccurs="0" type="columnGroupType">
+                <xs:unique name="unique-column">
+                    <xs:selector xpath="si:column"/>
+                    <xs:field xpath="@name"/>
+                </xs:unique>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" use="required" type="requiredStringType">
+            <xs:annotation>
+                <xs:documentation><![CDATA[The actual name of the property to be mapped.]]></xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="column" type="columnType">
+            <xs:annotation>
+                <xs:documentation><![CDATA[The name of the column field to be mapped from.
+                Use this if the property's setter method accepts a single argument.
+                Note: If the column attribute is not specified or the column element is not used,
+                the property name will be used as the default column value. If no name is entered or
+                the columns element is not used, the converter assigned to the property will be null.
+                Note: An error will be thrown if the column field is not specified and the converter-ref is.
+                ]]>
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attributeGroup ref="converterAttribute"/>
+        <xs:attribute name="order" type="xs:positiveInteger">
+            <xs:annotation>
+                <xs:documentation><![CDATA[The order at which each setter method will be invoked,
+                    starting from the smallest to the largest. If the order is not set, the comparison
+                    will be based on the name attribute.
+                    ]]>
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="columnGroupType">
+        <xs:sequence minOccurs="0">
+            <xs:element name="column" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute name="name" use="required" type="columnType"/>
+                    <xs:attributeGroup ref="converterAttribute"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="columnType">
+        <xs:restriction base="requiredStringType">
+            <xs:pattern value="[\w_\s\-]+"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:attributeGroup name="converterAttribute">
+        <xs:attribute name="converter-ref" type="requiredStringType"/>
+        <xs:attribute name="converter-data" type="requiredStringType">
+            <xs:annotation>
+                <xs:documentation><![CDATA[Extra data to pass to the converter.]]></xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:attributeGroup>
+
+    <xs:simpleType name="requiredStringType">
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>
