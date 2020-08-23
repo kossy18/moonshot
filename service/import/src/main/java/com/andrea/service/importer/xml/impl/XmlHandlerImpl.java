@@ -4,24 +4,32 @@
 
 package com.andrea.service.importer.xml.impl;
 
+import com.andrea.service.importer.converters.CellConverter;
+import com.andrea.service.importer.converters.PropertyConverter;
 import com.andrea.service.importer.xml.XmlHandler;
 import com.andrea.service.importer.xml.XmlProcessor;
 import org.xml.sax.Attributes;
 import org.xml.sax.helpers.DefaultHandler;
 
+import java.util.Map;
+
 public class XmlHandlerImpl extends DefaultHandler implements XmlHandler {
 
     private XmlProcessor processor;
-
     private Callback mappingCallback;
 
-    public XmlHandlerImpl() {
-        init();
-    }
+    private Map<String, CellConverter> cellConverters;
+    private Map<String, PropertyConverter> propertyConverters;
 
     @Override
     public void init() {
         processor = new XmlProcessor();
+        processor.setGlobalConverters(cellConverters, propertyConverters);
+    }
+
+    public void setGlobalConverters(Map<String, CellConverter> cellConverters, Map<String, PropertyConverter> propertyConverters) {
+        this.cellConverters = cellConverters;
+        this.propertyConverters = propertyConverters;
     }
 
     @Override
@@ -35,8 +43,12 @@ public class XmlHandlerImpl extends DefaultHandler implements XmlHandler {
             init();
         }
         switch (qName) {
-            case "converter": {
-                processor.addConverter(attributes.getValue("name"), attributes.getValue("value"));
+            case "cell-converter": {
+                processor.addCellConverter(attributes.getValue("name"), attributes.getValue("value"));
+                break;
+            }
+            case "property-converter": {
+                processor.addPropertyConverter(attributes.getValue("name"), attributes.getValue("value"));
                 break;
             }
             case "class": {
@@ -53,6 +65,7 @@ public class XmlHandlerImpl extends DefaultHandler implements XmlHandler {
             }
             case "column": {
                 processor.addColumn(attributes.getValue("name"),
+                        attributes.getValue("order"),
                         attributes.getValue("converter-ref"),
                         attributes.getValue("converter-data"));
                 break;
@@ -67,7 +80,7 @@ public class XmlHandlerImpl extends DefaultHandler implements XmlHandler {
     @Override
     public void endElement(String uri, String localName, String qName) {
         if (qName.equals("class")) {
-            mappingCallback.mappingResult(processor.buildEntityInfo(), processor.getConverters());
+            mappingCallback.mappingResult(processor.buildEntityInfo(), processor.getCellConverters(), processor.getPropertyConverters());
             complete();
         }
     }

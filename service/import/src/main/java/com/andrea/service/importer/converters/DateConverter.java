@@ -13,16 +13,16 @@ import java.text.SimpleDateFormat;
  * Converts strings to a {@link java.util.Date Date} object
  *
  * @author Inyiama Kossy
- * @see Converter
+ * @see CellConverter
  */
-public class DateConverter implements Converter {
+public class DateConverter implements CellConverter {
 
     @Override
-    public Object convert(Cell cell, String dateFormat) {
+    public Object convert(String dateFormat, Cell... cell) {
         try {
-            return new SimpleDateFormat(dateFormat).parse(cell.getValue());
+            return new SimpleDateFormat(dateFormat).parse(cell[0].getValue());
         } catch (ParseException e) {
-            throw new ConverterException("Could not parse date " + cell.getValue() + " with format " + dateFormat, e);
+            throw new ConverterException("Could not parse date " + cell[0].getValue() + " with format " + dateFormat, e);
         }
     }
 }

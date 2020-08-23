@@ -6,7 +6,8 @@ package com.andrea.service.importer.xml;
 
 import com.andrea.service.importer.EntityInfo;
 import com.andrea.service.importer.Property;
-import com.andrea.service.importer.converters.Converter;
+import com.andrea.service.importer.converters.CellConverter;
+import com.andrea.service.importer.converters.PropertyConverter;
 import com.andrea.service.importer.util.AssertUtils;
 import com.andrea.service.importer.util.ReflectionUtils;
 import com.andrea.service.importer.util.StringUtils;
@@ -15,22 +16,26 @@ import java.util.*;
 
 public final class XmlProcessor {
 
-    // Allow characters, digits, spaces, _ and -
-    private static final String COLUMN_NAME_PATTERN = "^[\\w_\\s\\-]+$";
+    // Allow characters, digits, spaces, ^, $, _ and -
+    private static final String COLUMN_NAME_PATTERN = "^[\\w_\\s\\-^$.*()]+$";
 
-    private Class clazz;
+    private Class<?> clazz;
 
     private Set<String> columnPatternSet;
-
     private LinkedList<Property> properties;
 
-    private Map<String, Converter> converterMap;
+    private Map<String, CellConverter> cellConverters;
+    private Map<String, PropertyConverter> propertyConverters;
 
     public XmlProcessor() {
         clazz = null;
-        converterMap = new HashMap<>();
         properties = new LinkedList<>();
         columnPatternSet = new HashSet<>();
+    }
+
+    public void setGlobalConverters(Map<String, CellConverter> cellConverters, Map<String, PropertyConverter> propertyConverters) {
+        this.cellConverters = cellConverters;
+        this.propertyConverters = propertyConverters;
     }
 
     public void setClass(String className) {
@@ -57,18 +62,23 @@ public final class XmlProcessor {
             // Ignored
         }
 
-        properties.add(new Property(name, order, verifyAndBuildConverter(column, converterRef, converterData)));
+        properties.add(new Property(name, column, order, verifyAndBuildConverter(true, column, converterRef, converterData)));
 
         if (!StringUtils.isEmpty(converterRef)) {
             columnPatternSet.add(converterRef);
         }
     }
 
-    public void addColumn(String name, String converterRef, String converterData) {
+    public void addColumn(String name, String orderStr, String converterRef, String converterData) {
         Property property = properties.peekLast();
 
         // Property should not be null here because addProperty must be called before addColumn
         AssertUtils.notNull(property);
+
+        int order = property.getColumnSize() + 1;
+        if (!StringUtils.isEmpty(orderStr)) {
+            order = Integer.parseInt(orderStr);
+        }
 
         // Avoid duplicate column names
         int prevColSize = columnPatternSet.size();
@@ -78,41 +88,71 @@ public final class XmlProcessor {
         if (newColSize != (prevColSize + 1)) {
             throw new InvalidMappingException("Column attribute name: " + name + " already exists for property: " + property.getName());
         }
-        property.setConverterMap(verifyAndBuildConverter(name, converterRef, converterData));
+        property.setColumnConverterInfo(order, verifyAndBuildConverter(false, name, converterRef, converterData));
     }
 
-    private Map<String, Property.ConverterInfo> verifyAndBuildConverter(String columnName, String converterRef, String converterData) {
+    private Map<String, Property.ConverterInfo> verifyAndBuildConverter(boolean isProperty, String columnName, String converterRef, String converterData) {
         boolean hasConverterRef = !StringUtils.isEmpty(converterRef);
+        if (hasConverterRef) {
+            boolean inCell = cellConverters.containsKey(converterRef);
+            boolean inProperty = propertyConverters.containsKey(converterRef);
 
-        if (hasConverterRef && !converterMap.containsKey(converterRef)) {
-            throw new InvalidMappingException("Property attribute converter-ref: " + converterRef + " not found in the global converter list");
+            if (!inCell && !inProperty) {
+                throw new InvalidMappingException("Property attribute converter-ref: " + converterRef + " not found in the global converter list");
+            }
+            if (isProperty && inCell) {
+                throw new InvalidMappingException("Property attribute converter-ref: " + converterRef + " must implement the PropertyConverter interface");
+            }
+            if (!isProperty && inProperty) {
+                throw new InvalidMappingException("Property attribute converter-ref: " + converterRef + " must implement the CellConverter interface");
+            }
         }
 
-        Map<String, Property.ConverterInfo> columnConverterMap = new HashMap<>();
-        columnConverterMap.put(columnName, hasConverterRef ? new Property.ConverterInfo(converterRef, converterData) : null);
-
-        return columnConverterMap;
+        Map<String, Property.ConverterInfo> infoMap = new HashMap<>();
+        infoMap.put(columnName, hasConverterRef ? new Property.ConverterInfo(converterRef, converterData) : null);
+        return infoMap;
     }
 
-    public void addConverter(String name, String className) {
+    public void addCellConverter(String name, String className) {
         if (StringUtils.isEmpty(name)) {
             name = className;
         }
         try {
-            Class converter = ReflectionUtils.toClass(className);
-            if (!ReflectionUtils.isInterfaceOf(converter, Converter.class.getName())) {
-                throw new InvalidMappingException("Converter attribute value: " + className + " does not implement the Converter interface");
+            Class<?> converter = ReflectionUtils.toClass(className);
+            if (!ReflectionUtils.isInterfaceOf(converter, CellConverter.class.getName())) {
+                throw new InvalidMappingException("CellConverter attribute value: " + className + " does not implement the CellConverter interface");
             }
-            converterMap.put(name, (Converter) converter.newInstance());
+            cellConverters.put(name, (CellConverter) converter.newInstance());
         } catch (ClassNotFoundException e) {
-            throw new InvalidMappingException("Converter attribute value: " + className + " could not be found", e);
+            throw new InvalidMappingException("CellConverter attribute value: " + className + " could not be found", e);
         } catch (IllegalAccessException | InstantiationException e) {
-            throw new MappingException("Converter attribute value: " + className + " could not be instantiated", e);
+            throw new MappingException("CellConverter attribute value: " + className + " could not be instantiated", e);
         }
     }
 
-    public Map<String, Converter> getConverters() {
-        return converterMap;
+    public void addPropertyConverter(String name, String className) {
+        if (StringUtils.isEmpty(name)) {
+            name = className;
+        }
+        try {
+            Class<?> converter = ReflectionUtils.toClass(className);
+            if (!ReflectionUtils.isInterfaceOf(converter, PropertyConverter.class.getName())) {
+                throw new InvalidMappingException("PropertyConverter attribute value: " + className + " does not implement the PropertyConverter interface");
+            }
+            propertyConverters.put(name, (PropertyConverter) converter.newInstance());
+        } catch (ClassNotFoundException e) {
+            throw new InvalidMappingException("PropertyConverter attribute value: " + className + " could not be found", e);
+        } catch (IllegalAccessException | InstantiationException e) {
+            throw new MappingException("PropertyConverter attribute value: " + className + " could not be instantiated", e);
+        }
+    }
+
+    public Map<String, CellConverter> getCellConverters() {
+        return cellConverters;
+    }
+
+    public Map<String, PropertyConverter> getPropertyConverters() {
+        return propertyConverters;
     }
 
     public EntityInfo buildEntityInfo() {
@@ -120,16 +160,11 @@ public final class XmlProcessor {
         for (Property p : properties) {
             if (p.getColumnSize() == 0) {
                 Map<String, Property.ConverterInfo> columnMap = new HashMap<>();
-                columnMap.put(p.getName(), null);
-                p.setConverterMap(columnMap);
+                columnMap.put(p.getColumnMapping(), null);
+                p.setColumnConverterInfo(0, columnMap);
             }
             Class<?>[] parameterTypes = setterMethodMap.get(ReflectionUtils.formatMethodName("set", p.getName()));
-            if (parameterTypes != null) {
-                if (p.getColumnSize() != parameterTypes.length) {
-                    throw new InvalidMappingException("Column length for property " + p.getName()
-                            + " differs from it's setter's parameter length by " + Math.abs(parameterTypes.length - p.getColumnSize()));
-                }
-            } else {
+            if (parameterTypes == null) {
                 throw new InvalidMappingException("Setter method for property " + p.getName() + " of class " + clazz.getName() + " does not exist");
             }
             p.setParameterTypes(parameterTypes);

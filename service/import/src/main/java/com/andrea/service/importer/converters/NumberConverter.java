@@ -5,15 +5,17 @@
 package com.andrea.service.importer.converters;
 
 import com.andrea.service.importer.reader.Cell;
-import org.apache.commons.lang3.StringUtils;
+import com.andrea.service.importer.util.StringUtils;
 
-public class NumberConverter implements Converter {
+public class NumberConverter implements CellConverter {
 
     @Override
-    public Object convert(Cell cell, String numberType) {
+    public Object convert(String numberType, Cell... cells) {
         if (StringUtils.isEmpty(numberType)) {
             return 0;
         }
+
+        Cell cell = cells[0];
 
         try {
             NumberType type = NumberType.valueOf(numberType.toUpperCase());

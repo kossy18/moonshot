@@ -17,7 +17,8 @@
         </xs:annotation>
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="converter" minOccurs="0" maxOccurs="unbounded" type="converterType"/>
+                <xs:element name="cell-converter" minOccurs="0" maxOccurs="unbounded" type="converterType"/>
+                <xs:element name="property-converter" minOccurs="0" maxOccurs="unbounded" type="converterType"/>
                 <xs:element name="class" minOccurs="0" maxOccurs="unbounded" type="classType">
                     <xs:unique name="unique-property">
                         <xs:selector xpath="si:property"/>
@@ -132,7 +133,7 @@
 
     <xs:simpleType name="columnType">
         <xs:restriction base="requiredStringType">
-            <xs:pattern value="[\w_\s\-]+"/>
+            <xs:pattern value="[\w_\s\-^$.*()]+"/>
         </xs:restriction>
     </xs:simpleType>
     

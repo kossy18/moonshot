@@ -4,7 +4,8 @@
 
 package com.andrea.service.importer;
 
-import com.andrea.service.importer.converters.Converter;
+import com.andrea.service.importer.converters.CellConverter;
+import com.andrea.service.importer.converters.PropertyConverter;
 import com.andrea.service.importer.reader.Cell;
 import com.andrea.service.importer.reader.Row;
 import com.andrea.service.importer.reader.RowSeeker;
@@ -43,91 +44,124 @@ public class EntityInfoProcessor<T> {
     }
 
     private void processImpl(RowSeeker seeker, Class<T> clazz, int batchSize, EntityInfoProcessorListener<T> processor) {
-        EntityInfo info = config.getEntityInfos().get(clazz);
-        if (info == null) {
-            return;
-        }
-        Map<String, Converter> converters = config.getConverters();
-
         int processed = 0;
         List<T> processedEntities = new LinkedList<>();
+
+        EntityInfo info = config.getEntityInfos().get(clazz);
+        if (info == null) {
+            if (processor != null) {
+                processor.onProcessed(processedEntities);
+            }
+            return;
+        }
+        List<Property> allProperties = info.getProperties();
+        Map<String, CellConverter> allCellConverters = config.getCellConverters();
+        Map<String, PropertyConverter> allPropertyConverters = config.getPropertyConverters();
+
+        class CellWrapper implements Comparable<CellWrapper> {
+            final int order;
+            final Cell cell;
+
+            CellWrapper(int order, Cell cell) {
+                this.order = order;
+                this.cell = cell;
+            }
+
+            @Override
+            public int compareTo(CellWrapper o) {
+                return Integer.compare(order, o.order);
+            }
+        }
+
         while (true) {
             Row row = seeker.next();
-            if (row != null) {
-                if (row.getIndex() == 0) {
-                    // Skip the header
-                    continue;
+            if (row == null) {
+                if (processor != null) {
+                    processor.onProcessed(processedEntities);
                 }
-                try {
-                    T entity = clazz.newInstance();
+                return;
+            }
 
-                    List<Property> properties = info.getProperties();
-                    Map<Cell, Property.ConverterInfo> pendingArgs = new LinkedHashMap<>();
-                    for (Iterator<Cell> cellIterator = row.getCells().iterator(); cellIterator.hasNext();) {
-                        Cell cell = cellIterator.next();
+            if (row.getIndex() == 0) {
+                // Skip the header
+                continue;
+            }
+            try {
+                T entity = clazz.newInstance();
+                Map<CellWrapper, Property.ConverterInfo> cellCvtHolder = new TreeMap<>();
 
-                        for (Iterator<Property> propertyIterator = properties.iterator(); propertyIterator.hasNext();) {
-                            Property property = propertyIterator.next();
+                for (Property property : allProperties) {
+                    cellCvtHolder.clear();
 
-                            boolean foundColumn = false;
-                            Property.ConverterInfo argConverter = null;
+                    for (Cell cell : row.getCells()) {
+                        int colOrder = -1;
+                        boolean foundColumn = false;
+                        Property.ConverterInfo colConverter = null;
 
-                            for (Map.Entry<Pattern, Property.ConverterInfo> entry : property.getConverterInfoMap().entrySet()) {
-                                if (entry.getKey().matcher(cell.getColumnName()).matches()) {
-                                    argConverter = entry.getValue();
-                                    foundColumn = true;
-                                    break;
-                                }
-                            }
-                            if (foundColumn) {
-                                if (property.getColumnSize() > 1) {
-                                    pendingArgs.put(cell, argConverter);
-                                    if (property.getColumnSize() == pendingArgs.size()) {
-                                        int index = 0;
-                                        Object[] methodArgs = new Object[property.getColumnSize()];
-                                        for (Map.Entry<Cell, Property.ConverterInfo> arg : pendingArgs.entrySet()) {
-                                            Cell argCell = arg.getKey();
-                                            Property.ConverterInfo argConvt = arg.getValue();
-                                            if (argConvt != null) {
-                                                methodArgs[index] = converters.get(argConvt.getData()).convert(argCell, argConvt.getData());
-                                            } else {
-                                                methodArgs[index] = argCell.getValue();
-                                            }
-                                            index++;
-                                        }
-                                        findAndInvokeMethod(clazz, property, entity, methodArgs);
-                                        propertyIterator.remove();
-                                    }
-                                } else {
-                                    Object methodArg = cell.getValue();
-                                    if (argConverter != null) {
-                                        Converter converter = converters.get(argConverter.getRef());
-                                        methodArg = converter.convert(cell, argConverter.getData());
-                                    }
-                                    findAndInvokeMethod(clazz, property, entity, methodArg);
-                                    propertyIterator.remove();
-                                }
-                                cellIterator.remove();
+                        for (Map.Entry<Pattern, Property.ColumnWrapper> entry : property.getColumnConverterInfo().entrySet()) {
+                            if (entry.getKey().matcher(cell.getColumnName()).matches()) {
+                                foundColumn = true;
+                                colOrder = entry.getValue().getOrder();
+                                colConverter = entry.getValue().getConverterInfo();
                                 break;
                             }
                         }
+
+                        if (foundColumn) {
+                            if (property.getColumnSize() == 1) {
+                                Object methodArg = cell.getValue();
+                                if (colConverter != null) {
+                                    CellConverter converter = allCellConverters.get(colConverter.getRef());
+                                    methodArg = converter.convert(colConverter.getData(), cell);
+                                }
+                                if (property.hasPropertyConverter()) {
+                                    Property.ConverterInfo propInfo = property.getPropertyConverterInfo();
+                                    if (propInfo != null) {
+                                        PropertyConverter converter = allPropertyConverters.get(propInfo.getRef());
+                                        methodArg = converter.convert(propInfo.getData(), methodArg);
+                                    }
+                                }
+                                findAndInvokeMethod(clazz, property, entity, methodArg);
+                                break;
+                            } else {
+                                cellCvtHolder.put(new CellWrapper(colOrder, cell), colConverter);
+
+                                if (property.getColumnSize() == cellCvtHolder.size()) {
+                                    int index = 0;
+                                    Object[] methodArgs = new Object[property.getColumnSize()];
+                                    for (Map.Entry<CellWrapper, Property.ConverterInfo> arg : cellCvtHolder.entrySet()) {
+                                        Property.ConverterInfo cvtInfo = cellCvtHolder.get(arg.getKey());
+                                        if (cvtInfo != null) {
+                                            CellConverter converter = allCellConverters.get(cvtInfo.getRef());
+                                            methodArgs[index++] = converter.convert(cvtInfo.getData(), arg.getKey().cell);
+                                        } else {
+                                            methodArgs[index++] = arg.getKey().cell.getValue();
+                                        }
+                                    }
+                                    if (property.hasPropertyConverter()) {
+                                        Property.ConverterInfo propInfo = property.getPropertyConverterInfo();
+                                        PropertyConverter converter = allPropertyConverters.get(propInfo.getRef());
+                                        Object arg = converter.convert(propInfo.getData(), methodArgs);
+                                        findAndInvokeMethod(clazz, property, entity, arg);
+                                    } else {
+                                        findAndInvokeMethod(clazz, property, entity, methodArgs);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
                     }
-                    processedEntities.add(entity);
-                    processed++;
-                    if (batchSize == processed) {
-                        processor.onProcessed(new LinkedList<>(processedEntities));
-                        processed = 0;
-                        processedEntities.clear();
-                    }
-                } catch (Exception e) {
-                    throw new ImporterException("An error occurred while processing row: " + row.getIndex(), e);
                 }
-            } else {
-                break;
+                processed++;
+                processedEntities.add(entity);
+                if (batchSize == processed) {
+                    processor.onProcessed(new LinkedList<>(processedEntities));
+                    processed = 0;
+                    processedEntities.clear();
+                }
+            } catch (Exception e) {
+                throw new ImporterException("An error occurred while processing row: " + row.getIndex(), e);
             }
-        }
-        if (!processedEntities.isEmpty()) {
-            processor.onProcessed(processedEntities);
         }
     }
 
@@ -138,7 +172,8 @@ public class EntityInfoProcessor<T> {
             throw new ImporterException("Could not find setter method for field: " + property.getName() + " for class: " + clazz.getName());
         } catch (IllegalArgumentException e) {
             throw new ImporterException("Could not invoke setter method for field: " + property.getName()
-                    + " with argument: " + Arrays.toString(methodArg) + ". Verify if a converter is being used", e);
+                    + " with argument: " + Arrays.toString(methodArg) + ". Verify if a converter is being used"
+                    + " or check the ordering of the arguments or check if the right types are invoked", e);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new ImporterException("An error occurred while invoking method for field: " + property.getName(), e);
         }

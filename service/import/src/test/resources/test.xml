@@ -3,15 +3,50 @@
   -->
 
 <si xmlns="http://andrea.com/schema/si">
-    <converter name="numConverter" value="com.andrea.service.importer.converters.NumberConverter"/>
+    <cell-converter name="numConverter" value="com.andrea.service.importer.converters.NumberConverter"/>
+    <property-converter name="priceConverter" value="com.andrea.service.importer.utils.PriceConverter"/>
 
     <class name="com.andrea.service.importer.entity.Product">
-        <property name="id" column="id" converter-ref="numConverter" converter-data="long" />
+        <property name="id">
+            <columns>
+                <column name="id" converter-ref="numConverter" converter-data="long"/>
+            </columns>
+        </property>
         <property name="name" column="description" />
-        <property name="quantity" column="quantity" converter-ref="numConverter" converter-data="integer" />
+        <property name="quantity">
+            <columns>
+                <column name="quantity" converter-ref="numConverter" converter-data="integer"/>
+            </columns>
+        </property>
         <property name="price">
             <columns>
                 <column name="price" converter-ref="numConverter" converter-data="float"/>
+            </columns>
+        </property>
+    </class>
+
+    <class name="com.andrea.service.importer.entity.Product2">
+        <property name="id">
+            <columns>
+                <column name="id" converter-ref="numConverter" converter-data="long"/>
+            </columns>
+        </property>
+        <property name="name">
+            <columns>
+                <column name="(.*)itl(.*)"/>
+                <column name="code" converter-ref="numConverter" converter-data="integer"/>
+            </columns>
+        </property>
+        <property name="description"/>
+        <property name="quantity">
+            <columns>
+                <column name="q(.*)y" converter-ref="numConverter" converter-data="integer"/>
+            </columns>
+        </property>
+        <property name="price" converter-ref="priceConverter">
+            <columns>
+                <column name="cost" converter-ref="numConverter" converter-data="double" />
+                <column name="^dist$" converter-ref="numConverter" converter-data="double" />
             </columns>
         </property>
     </class>

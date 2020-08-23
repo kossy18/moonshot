@@ -26,19 +26,12 @@
 
     <properties>
         <target.version>1.7</target.version>
-        <opencv.version>4.1</opencv.version>
         <poi.version>3.10-FINAL</poi.version>
         <junit.version>4.12</junit.version>
         <mockito.version>2.18.3</mockito.version>
     </properties>
     
     <dependencies>
-        <dependency>
-            <groupId>com.opencsv</groupId>
-            <artifactId>opencsv</artifactId>
-            <version>${opencv.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>

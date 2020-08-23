@@ -6,7 +6,7 @@ package com.andrea.service.importer.converters;
 
 import com.andrea.service.importer.reader.Cell;
 
-public interface Converter {
+public interface CellConverter {
 
-    Object convert(Cell cell, String extras);
+    Object convert(String extras, Cell... cells);
 }

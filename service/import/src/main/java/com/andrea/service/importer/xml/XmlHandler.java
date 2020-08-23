@@ -1,7 +1,8 @@
 package com.andrea.service.importer.xml;
 
 import com.andrea.service.importer.EntityInfo;
-import com.andrea.service.importer.converters.Converter;
+import com.andrea.service.importer.converters.CellConverter;
+import com.andrea.service.importer.converters.PropertyConverter;
 import org.xml.sax.ContentHandler;
 
 import java.util.Map;
@@ -16,6 +17,6 @@ public interface XmlHandler extends ContentHandler {
 
     interface Callback {
         void readResource(String resource);
-        void mappingResult(EntityInfo info, Map<String, Converter> converters);
+        void mappingResult(EntityInfo info, Map<String, CellConverter> cellConverters, Map<String, PropertyConverter> propertyConverters);
     }
 }

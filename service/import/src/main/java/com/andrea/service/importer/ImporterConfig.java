@@ -4,7 +4,8 @@
 
 package com.andrea.service.importer;
 
-import com.andrea.service.importer.converters.Converter;
+import com.andrea.service.importer.converters.CellConverter;
+import com.andrea.service.importer.converters.PropertyConverter;
 import com.andrea.service.importer.util.AssertUtils;
 import com.andrea.service.importer.util.FileUtils;
 import com.andrea.service.importer.xml.MappingException;
@@ -29,14 +30,15 @@ public class ImporterConfig {
     private static final String DEFAULT_MAPPING_FILE_NAME = "service-importer-mapping.xml";
 
     private Map<Class<?>, EntityInfo> entityInfoMap;
-
-    private Map<String, Converter> converterMap;
+    private Map<String, CellConverter> cellConverterMap;
+    private Map<String, PropertyConverter> propertyConverterMap;
 
     private XmlReader xmlReader;
 
     public ImporterConfig() {
         entityInfoMap = new HashMap<>();
-        converterMap = new HashMap<>();
+        cellConverterMap = new HashMap<>();
+        propertyConverterMap = new HashMap<>();
     }
 
     public ImporterConfig(XmlReader reader) {
@@ -60,9 +62,10 @@ public class ImporterConfig {
             validateResource(resource);
             xmlReader.readXml(resource, new XmlReader.Callback() {
                 @Override
-                public void onCall(Map<Class<?>, EntityInfo> infoMap, Map<String, Converter> converter1) {
+                public void onCall(Map<Class<?>, EntityInfo> infoMap, Map<String, CellConverter> cellMap, Map<String, PropertyConverter> propertyMap) {
                     entityInfoMap.putAll(infoMap);
-                    converterMap.putAll(converter1);
+                    cellConverterMap.putAll(cellMap);
+                    propertyConverterMap.putAll(propertyMap);
                 }
             });
             xmlReader.complete();
@@ -77,8 +80,12 @@ public class ImporterConfig {
         return Collections.unmodifiableMap(entityInfoMap);
     }
 
-    public Map<String, Converter> getConverters() {
-        return Collections.unmodifiableMap(converterMap);
+    public Map<String, CellConverter> getCellConverters() {
+        return Collections.unmodifiableMap(cellConverterMap);
+    }
+
+    public Map<String, PropertyConverter> getPropertyConverters() {
+        return Collections.unmodifiableMap(propertyConverterMap);
     }
 
     public static void validateResource(String resource) throws IOException, SAXException {

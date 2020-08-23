@@ -2,25 +2,25 @@ package com.andrea.service.importer;
 
 import com.andrea.service.importer.util.StringUtils;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public final class Property {
 
-    private final String name;
-
     private final int order;
+    private final String name;
+    private final String column;
 
     private Class<?>[] parameterTypes;
 
-    private Map<Pattern, ConverterInfo> converterMap;
+    private Map<Pattern, ConverterInfo> propertyConverterInfo;
+    private Map<Pattern, ColumnWrapper> columnConverterInfo;
 
-    public Property(String name, int order, Map<String, ConverterInfo> columnConverterMap) {
+    public Property(String name, String column, int order, Map<String, ConverterInfo> propertyConverterInfo) {
         this.name = name;
         this.order = order;
-        setConverterMap(columnConverterMap);
+        this.column = column;
+        setPropertyConverterInfo(propertyConverterInfo);
     }
 
     public String getName() {
@@ -31,6 +31,10 @@ public final class Property {
         return order;
     }
 
+    public String getColumnMapping() {
+        return StringUtils.isEmpty(column) ? name : column;
+    }
+
     public Class<?>[] getParameterTypes() {
         return parameterTypes;
     }
@@ -39,23 +43,81 @@ public final class Property {
         this.parameterTypes = parameterTypes;
     }
 
-    public Map<Pattern, ConverterInfo> getConverterInfoMap() {
-        return Collections.unmodifiableMap(converterMap);
-    }
-
     public int getColumnSize() {
-        return converterMap.size();
+        return columnConverterInfo != null ? columnConverterInfo.size() : 0;
     }
 
-    public void setConverterMap(Map<String, ConverterInfo> columnConverterMap) {
-        if (converterMap == null) {
-            converterMap = new LinkedHashMap<>(columnConverterMap.size());
+    public Map<Pattern, ColumnWrapper> getColumnConverterInfo() {
+        return columnConverterInfo != null ? Collections.unmodifiableMap(columnConverterInfo) : Collections.<Pattern, ColumnWrapper>emptyMap();
+    }
+
+    public void setPropertyConverterInfo(Map<String, ConverterInfo> propertyConverterInfo) {
+        if (this.propertyConverterInfo == null) {
+            this.propertyConverterInfo = new LinkedHashMap<>();
         }
-        for (Map.Entry<String, ConverterInfo> entry : columnConverterMap.entrySet()) {
+        buildPropertyConverterInfo(propertyConverterInfo);
+    }
+
+    private void buildPropertyConverterInfo(Map<String, ConverterInfo> converterInfo) {
+        for (Map.Entry<String, ConverterInfo> entry : converterInfo.entrySet()) {
+            Pattern pattern = null;
             if (!StringUtils.isEmpty(entry.getKey())) {
-                converterMap.put(Pattern.compile(entry.getKey(), Pattern.CASE_INSENSITIVE), entry.getValue());
+                pattern = Pattern.compile(entry.getKey(), Pattern.CASE_INSENSITIVE);
+            }
+            if (pattern == null && entry.getValue() == null) {
+                continue;
+            }
+            this.propertyConverterInfo.put(pattern, entry.getValue());
+        }
+    }
+
+    public void setColumnConverterInfo(int order, Map<String, ConverterInfo> columnConverterInfo) {
+        if (this.columnConverterInfo == null) {
+            this.columnConverterInfo = new LinkedHashMap<>();
+        }
+        buildColumnConverterInfo(order, columnConverterInfo);
+    }
+
+    private void buildColumnConverterInfo(int order, Map<String, ConverterInfo> converterInfo) {
+        for (Map.Entry<String, ConverterInfo> entry : converterInfo.entrySet()) {
+            Pattern pattern = null;
+            if (!StringUtils.isEmpty(entry.getKey())) {
+                pattern = Pattern.compile(entry.getKey(), Pattern.CASE_INSENSITIVE);
+            }
+            if (pattern == null && entry.getValue() == null) {
+                continue;
+            }
+            this.columnConverterInfo.put(pattern, new ColumnWrapper(order, entry.getValue()));
+        }
+    }
+
+    public boolean hasPropertyConverter() {
+        return !propertyConverterInfo.isEmpty();
+    }
+
+    public ConverterInfo getPropertyConverterInfo() {
+        if (!propertyConverterInfo.isEmpty()) {
+            for (Map.Entry<Pattern, ConverterInfo> infoEntry : propertyConverterInfo.entrySet()) {
+                return infoEntry.getValue();
             }
         }
+        return null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Property property = (Property) o;
+        return Objects.equals(name, property.name) &&
+                Arrays.equals(parameterTypes, property.parameterTypes);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(name, order);
+        result = 31 * result + Arrays.hashCode(parameterTypes);
+        return result;
     }
 
     @Override
@@ -63,8 +125,27 @@ public final class Property {
         return "Property{" +
                 "order=" + order +
                 ", name='" + name + '\'' +
-                ", converterMap=" + converterMap +
+                ", propertyConverterInfo=" + propertyConverterInfo +
+                ", columnConverterInfo=" + columnConverterInfo +
                 '}';
+    }
+
+    public static class ColumnWrapper {
+        private final int order;
+        private ConverterInfo info;
+
+        ColumnWrapper(int order, ConverterInfo info) {
+            this.order = order;
+            this.info = info;
+        }
+
+        public int getOrder() {
+            return order;
+        }
+
+        public ConverterInfo getConverterInfo() {
+            return info;
+        }
     }
 
     public static class ConverterInfo {

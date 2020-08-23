@@ -5,6 +5,7 @@
 package com.andrea.service.importer;
 
 import com.andrea.service.importer.entity.Product;
+import com.andrea.service.importer.entity.Product2;
 import com.andrea.service.importer.reader.DefaultDocumentReaderFactory;
 import com.andrea.service.importer.reader.DocumentReaderFactory;
 import com.andrea.service.importer.reader.ReaderType;
@@ -23,10 +24,11 @@ import static org.junit.Assert.assertEquals;
 public class EntityInfoProcessorTest {
     private static final String XML_FILE_PATH = "src/test/resources/test.xml";
     private static final String CSV_FILE_PATH = "src/test/resources/test.csv";
+    private static final String CSV_FILE_PATH_2 = "src/test/resources/test2.csv";
     private static final String XLSX_FILE_PATH = "src/test/resources/test.xlsx";
 
     private DocumentReaderFactory readerFactory;
-    private EntityInfoProcessor<Product> processor;
+    private EntityInfoProcessor processor;
 
     @Before
     public void init() {
@@ -38,35 +40,34 @@ public class EntityInfoProcessorTest {
         processor = new EntityInfoProcessor<>(config);
     }
 
-    @Test
-    public void processAndGenerateEntityFromCsv() throws FileNotFoundException {
+    public void processAndGenerateEntityFromCsv_1() throws FileNotFoundException {
         RowSeeker seeker = readerFactory.createReader(ReaderType.CSV).read(new FileInputStream(CSV_FILE_PATH));
         List<Product> products = processor.process(seeker, Product.class);
         seeker.close();
 
-        assertEquals(products.size(), 2);
+        assertEquals(1, products.size());
 
         Product product = products.get(0);
 
-        assertEquals(product.getId(), 1);
-        assertEquals(product.getName(), "Book");
-        assertEquals(product.getQuantity(), 5);
-        assertEquals(product.getPrice(), 5.25f, 0.0f);
+        assertEquals(1L, product.getId());
+        assertEquals("Book", product.getName());
+        assertEquals(5, product.getQuantity());
+        assertEquals(5.25f, product.getPrice(), 0.0f);
     }
 
-/*    @Test
-    public void processAndGenerateEntityFromXlsx() {
-        RowSeeker seeker = readerFactory.getReader(DocumentReaderFactory.SPREADSHEET_READER).read(XLSX_FILE_PATH, 1);
-        List<Product> products = processor.process(seeker, Product.class);
+   @Test
+    public void processAndGenerateEntityFromCsv_2() throws FileNotFoundException {
+        RowSeeker seeker = readerFactory.createReader(ReaderType.CSV).read(new FileInputStream(CSV_FILE_PATH_2));
+        List<Product2> products = processor.process(seeker, Product2.class);
         seeker.close();
 
-        assertEquals(products.size(), 2);
+        assertEquals(2, products.size());
 
-        Product product = products.get(1);
+        Product2 product = products.get(0);
 
-        assertEquals(product.getId(), 2);
-        assertEquals(product.getName(), "Pen");
-        assertEquals(product.getQuantity(), 3);
-        assertEquals(product.getPrice(), 1.52f, 0.0f);
-    }*/
+        assertEquals(1L, product.getId());
+        assertEquals("Book - 1", product.getName());
+        assertEquals(2, product.getQuantity());
+        assertEquals(7.875f, product.getPrice(), 0.0f);
+    }
 }

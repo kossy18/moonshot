@@ -6,8 +6,10 @@ package com.andrea.service.importer.xml;
 
 import com.andrea.service.importer.EntityInfo;
 import com.andrea.service.importer.ImporterConfig;
-import com.andrea.service.importer.converters.Converter;
+import com.andrea.service.importer.converters.CellConverter;
+import com.andrea.service.importer.converters.PropertyConverter;
 import com.andrea.service.importer.util.FileUtils;
+import com.andrea.service.importer.xml.impl.XmlHandlerImpl;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -31,8 +33,10 @@ public class XmlReader {
     public void readXml(String resource, Callback mappingResult) throws ParserConfigurationException, SAXException, IOException {
         final SAXParserFactory factory = SAXParserFactory.newInstance();
         final List<EntityInfo> entityInfos = new ArrayList<>();
-        final Map<String, Converter> converters = new HashMap<>();
+        final Map<String, CellConverter> cellConverters = new HashMap<>();
+        final Map<String, PropertyConverter> propertyConverters = new HashMap<>();
 
+        ((XmlHandlerImpl)handler).setGlobalConverters(cellConverters, propertyConverters);
         handler.addXmlResource(new XmlHandler.Callback() {
             @Override
             public void readResource(String resource) {
@@ -46,12 +50,13 @@ public class XmlReader {
             }
 
             @Override
-            public void mappingResult(EntityInfo info, Map<String, Converter> converters1) {
+            public void mappingResult(EntityInfo info, Map<String, CellConverter> cellCvt, Map<String, PropertyConverter> propCvt) {
                 if (entityInfos.contains(info)) {
                     throw new InvalidMappingException("Cyclic mapping detected. Check for duplicate file include elements");
                 }
                 entityInfos.add(info);
-                converters.putAll(converters1);
+                cellConverters.putAll(cellCvt);
+                propertyConverters.putAll(propCvt);
             }
         });
         SAXParser parser = factory.newSAXParser();
@@ -61,14 +66,15 @@ public class XmlReader {
         for (EntityInfo info : entityInfos) {
             infoMap.put(info.getClazz(), info);
         }
-        mappingResult.onCall(infoMap, converters);
+        mappingResult.onCall(infoMap, cellConverters, propertyConverters);
     }
 
     public void complete() {
         handler.complete();
+        handler = null;
     }
 
     public interface Callback {
-        void onCall(Map<Class<?>, EntityInfo> infoMap, Map<String, Converter> converterMap);
+        void onCall(Map<Class<?>, EntityInfo> infoMap, Map<String, CellConverter> cellConverterMap, Map<String, PropertyConverter> propertyConverterMap);
     }
 }

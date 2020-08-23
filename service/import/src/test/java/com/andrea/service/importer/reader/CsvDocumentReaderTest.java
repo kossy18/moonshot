@@ -27,16 +27,16 @@ public class CsvDocumentReaderTest {
         List<Cell> cells = seeker.next().getCells();
         seeker.close();
 
-        assertEquals(cells.get(0).getValue(), "1");
-        assertEquals(cells.get(1).getValue(), "Book");
-        assertEquals(cells.get(2).getValue(), "5");
-        assertEquals(cells.get(3).getValue(), "5.25");
+        assertEquals("1", cells.get(0).getValue());
+        assertEquals("Book", cells.get(1).getValue());
+        assertEquals("5", cells.get(2).getValue());
+        assertEquals("5.25", cells.get(3).getValue());
     }
 
     @Test
     public void readAndCountCsvDocument() throws FileNotFoundException {
         DocumentReader reader = new CsvDocumentReader();
         RowSeeker seeker = reader.read(new FileInputStream(CSV_FILE_PATH));
-        assertEquals(seeker.count(), 3);
+        assertEquals(3, seeker.count());
     }
 }

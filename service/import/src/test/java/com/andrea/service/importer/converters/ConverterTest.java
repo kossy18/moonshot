@@ -16,28 +16,28 @@ public class ConverterTest {
 
     @Test
     public void convertStringToDate() {
-        Converter dateConverter = new DateConverter();
+        CellConverter dateConverter = new DateConverter();
 
         Cell cell = new DefaultCell(1, "Column_1", "22/03/2019");
-        Date expectedResult = (Date) dateConverter.convert(cell, "dd/MM/yyyy");
+        Date expectedResult = (Date) dateConverter.convert("dd/MM/yyyy", cell);
         Assert.assertEquals(expectedResult, TestUtils.getDate(22, 3, 2019));
     }
 
     @Test
     public void convertStringToInteger() {
-        Converter numberConverter = new NumberConverter();
+        CellConverter numberConverter = new NumberConverter();
 
         Cell cell = new DefaultCell(1, "Column_1", "9123");
-        int expectedResult = (int) numberConverter.convert(cell, NumberConverter.NumberType.INTEGER.name());
-        Assert.assertEquals(expectedResult, 9123);
+        int expectedResult = (int) numberConverter.convert(NumberConverter.NumberType.INTEGER.name(), cell);
+        Assert.assertEquals(9123, expectedResult);
     }
 
     @Test
     public void convertStringToDouble() {
-        Converter numberConverter = new NumberConverter();
+        CellConverter numberConverter = new NumberConverter();
 
         Cell cell = new DefaultCell(1, "Column_1", "167.123456789");
-        double expectedResult = (double) numberConverter.convert(cell, NumberConverter.NumberType.DOUBLE.name());
-        Assert.assertEquals(expectedResult, 167.123456789, 0.0);
+        double expectedResult = (double) numberConverter.convert(NumberConverter.NumberType.DOUBLE.name(), cell);
+        Assert.assertEquals(167.123456789, expectedResult, 0.0);
     }
 }
