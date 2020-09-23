@@ -6,5 +6,5 @@ package com.andrea.service.importer.reader;
 
 public enum ReaderType {
 
-    CSV
+    CSV, SPREADSHEET
 }

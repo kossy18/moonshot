@@ -40,6 +40,7 @@ public class EntityInfoProcessorTest {
         processor = new EntityInfoProcessor<>(config);
     }
 
+    @Test
     public void processAndGenerateEntityFromCsv_1() throws FileNotFoundException {
         RowSeeker seeker = readerFactory.createReader(ReaderType.CSV).read(new FileInputStream(CSV_FILE_PATH));
         List<Product> products = processor.process(seeker, Product.class);
@@ -69,5 +70,21 @@ public class EntityInfoProcessorTest {
         assertEquals("Book - 1", product.getName());
         assertEquals(2, product.getQuantity());
         assertEquals(7.875f, product.getPrice(), 0.0f);
+    }
+
+    @Test
+    public void processAndGenerateEntityFromSpreadsheet() throws FileNotFoundException {
+        RowSeeker seeker = readerFactory.createReader(ReaderType.SPREADSHEET).read(new FileInputStream(XLSX_FILE_PATH));
+        List<Product> products = processor.process(seeker, Product.class);
+        seeker.close();
+
+        assertEquals(2, products.size());
+
+        Product product = products.get(0);
+
+        assertEquals(1L, product.getId());
+        assertEquals("Book", product.getName());
+        assertEquals(5, product.getQuantity());
+        assertEquals(5.25f, product.getPrice(), 0.0f);
     }
 }

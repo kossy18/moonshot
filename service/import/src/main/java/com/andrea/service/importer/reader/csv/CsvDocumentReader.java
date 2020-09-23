@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.List;
 
 public class CsvDocumentReader implements DocumentReader {
 
@@ -21,17 +21,16 @@ public class CsvDocumentReader implements DocumentReader {
     }
 
     private static class CsvRowSeeker implements RowSeeker {
-
         private int rows = 0;
         private int linesCount = -1;
 
-        private Cell[] cellHeaders;
+        private List<Cell> cellHeaders;
         private CSVReader csvReader;
 
         private InputStream is;
         private InputStreamReader reader;
 
-        CsvRowSeeker(InputStream is) {
+        private CsvRowSeeker(InputStream is) {
             this.is = is;
             reader = new InputStreamReader(is);
             csvReader = new CSVReader(reader);
@@ -42,21 +41,20 @@ public class CsvDocumentReader implements DocumentReader {
             try {
                 String[] values = csvReader.readNext();
                 if (values != null) {
-                    Cell[] cells = new Cell[values.length];
                     linesCount++;
-                    if (linesCount == 0) {
-                        for (int i = 0, j = values.length; i < j; i++) {
-                            String s = values[i].trim();
-                            cells[i] = new DefaultCell(i, s, s);
-                        }
-                        cellHeaders = cells;
-                    } else {
-                        for (int i = 0, j = values.length; i < j; i++) {
-                            String s = values[i].trim();
-                            cells[i] = new DefaultCell(i, cellHeaders[i].getValue(), s);
+                    List<Cell> cells = new ArrayList<>(values.length);
+                    for (int i = 0, j = values.length; i < j; i++) {
+                        String s = values[i].trim();
+                        if (linesCount == 0) {
+                            cells.add(new DefaultCell(i, s, s));
+                        } else {
+                            cells.add(new DefaultCell(i, cellHeaders.get(i).getValue(), s));
                         }
                     }
-                    return new Row(linesCount, new ArrayList<>(Arrays.asList(cells)));
+                    if (linesCount == 0) {
+                        cellHeaders = cells;
+                    }
+                    return new Row(linesCount, cells);
                 }
             } catch (Exception e) {
                 throw new DocumentReaderException("An error occurred while trying to read the csv file", e);
@@ -78,6 +76,11 @@ public class CsvDocumentReader implements DocumentReader {
 
         @Override
         public void close() {
+            try {
+                is.close();
+            } catch (IOException e) {
+                // Ignore
+            }
             try {
                 reader.close();
             } catch (IOException e) {
