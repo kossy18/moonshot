@@ -6,6 +6,10 @@ package com.andrea.service.importer.util;
 
 public final class AssertUtils {
 
+    private AssertUtils() {
+        // No implementation
+    }
+
     public static void notEmpty(String s) {
         if (StringUtils.isEmpty(s)) {
             throw new IllegalArgumentException("String supplied must not be empty");

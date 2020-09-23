@@ -12,7 +12,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 public class CsvDocumentReader implements DocumentReader {
 
@@ -23,37 +22,37 @@ public class CsvDocumentReader implements DocumentReader {
 
     private static class CsvRowSeeker implements RowSeeker {
 
+        private int rows = 0;
         private int linesCount = -1;
 
-        private int rows = 0;
-
         private Cell[] cellHeaders;
+        private CSVReader csvReader;
 
         private InputStream is;
-
         private InputStreamReader reader;
 
         CsvRowSeeker(InputStream is) {
             this.is = is;
             reader = new InputStreamReader(is);
+            csvReader = new CSVReader(reader);
         }
 
         @Override
         public Row next() {
             try {
-                List<String> values = CsvHelper.parseLine(reader);
-                if (!values.isEmpty()) {
-                    Cell[] cells = new Cell[values.size()];
+                String[] values = csvReader.readNext();
+                if (values != null) {
+                    Cell[] cells = new Cell[values.length];
                     linesCount++;
                     if (linesCount == 0) {
-                        for (int i = 0, j = values.size(); i < j; i++) {
-                            String s = values.get(i).trim();
+                        for (int i = 0, j = values.length; i < j; i++) {
+                            String s = values[i].trim();
                             cells[i] = new DefaultCell(i, s, s);
                         }
                         cellHeaders = cells;
                     } else {
-                        for (int i = 0, j = values.size(); i < j; i++) {
-                            String s = values.get(i).trim();
+                        for (int i = 0, j = values.length; i < j; i++) {
+                            String s = values[i].trim();
                             cells[i] = new DefaultCell(i, cellHeaders[i].getValue(), s);
                         }
                     }
@@ -82,6 +81,11 @@ public class CsvDocumentReader implements DocumentReader {
             try {
                 reader.close();
             } catch (IOException e) {
+                // Ignore
+            }
+            try {
+                csvReader.close();
+            } catch (IOException ignore) {
                 // Ignore
             }
         }

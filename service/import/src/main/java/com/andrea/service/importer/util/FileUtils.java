@@ -15,6 +15,10 @@ import java.net.URL;
 
 public final class FileUtils {
 
+    private FileUtils() {
+        // No implementation
+    }
+
     private static final int BUFFER_SIZE = 4096;
 
     // Does not deal with lines terminated by \r

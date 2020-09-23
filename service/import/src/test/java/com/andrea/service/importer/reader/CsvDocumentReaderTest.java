@@ -37,6 +37,6 @@ public class CsvDocumentReaderTest {
     public void readAndCountCsvDocument() throws FileNotFoundException {
         DocumentReader reader = new CsvDocumentReader();
         RowSeeker seeker = reader.read(new FileInputStream(CSV_FILE_PATH));
-        assertEquals(3, seeker.count());
+        assertEquals(2, seeker.count());
     }
 }

@@ -14,6 +14,10 @@ import java.util.Map;
  */
 public final class ReflectionUtils {
 
+    private ReflectionUtils() {
+        // No implementation
+    }
+
     public static Class<?> toClass(String name) throws ClassNotFoundException {
         AssertUtils.notEmpty(name);
         return Class.forName(name);
