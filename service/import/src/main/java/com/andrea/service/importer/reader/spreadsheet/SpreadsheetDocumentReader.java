@@ -2,14 +2,15 @@
  * Copyright (c) 2020. Inyiama Kossy
  */
 
-package com.andrea.service.importer.reader.xls;
+package com.andrea.service.importer.reader.spreadsheet;
 
 import com.andrea.service.importer.reader.*;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -23,21 +24,27 @@ public class SpreadsheetDocumentReader implements DocumentReader {
 
     private static class SpreadsheetRowSeeker implements RowSeeker {
         private List<Cell> cellHeaders;
-        private InputStream is;
+        private InputStream bis;
 
-        private XSSFSheet sheet;
-        private XSSFWorkbook workbook;
+        private Sheet sheet;
+        private Workbook workbook;
         private Iterator<org.apache.poi.ss.usermodel.Row> rowIterator;
 
         private SpreadsheetRowSeeker(InputStream is) {
-            this.is = is;
+            bis = new BufferedInputStream(is);
             try {
-                workbook = new XSSFWorkbook(is);
-                sheet = workbook.getSheetAt(0);
-                rowIterator = sheet.iterator();
+                workbook = new XSSFWorkbook(bis);
+            } catch (org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException e) {
+                try {
+                    workbook = new HSSFWorkbook(bis);
+                } catch (IOException e1) {
+                    throw new DocumentReaderException("An error occurred while trying to read the xls file", e1);
+                }
             } catch (IOException e) {
                 throw new DocumentReaderException("An error occurred while trying to read the xls file", e);
             }
+            sheet = workbook.getSheetAt(0);
+            rowIterator = sheet.iterator();
         }
 
         @Override
@@ -74,7 +81,7 @@ public class SpreadsheetDocumentReader implements DocumentReader {
                 // Ignore
             }
             try {
-                is.close();
+                bis.close();
             } catch (IOException ignored) {
                 // Ignore
             }

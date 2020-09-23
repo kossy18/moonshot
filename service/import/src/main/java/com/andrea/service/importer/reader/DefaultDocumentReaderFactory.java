@@ -5,7 +5,7 @@
 package com.andrea.service.importer.reader;
 
 import com.andrea.service.importer.reader.csv.CsvDocumentReader;
-import com.andrea.service.importer.reader.xls.SpreadsheetDocumentReader;
+import com.andrea.service.importer.reader.spreadsheet.SpreadsheetDocumentReader;
 
 public class DefaultDocumentReaderFactory implements DocumentReaderFactory {
 
