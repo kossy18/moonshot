@@ -1,4 +1,4 @@
-# 
+# Importer
 
 This is a Java library which makes is easy to map values from documents to Java objects.
 
@@ -68,7 +68,7 @@ public class Product {
 }
 ```
 
-The PriceConverter is a property converter which is needed in the xml mapping below
+The PriceConverter is a property converter which is needed in the xml mapping below (It's usage will be explained later)
 ```java
 public class PriceConverter implements PropertyConverter {
 
@@ -116,14 +116,14 @@ Next is to write the xml mapping
     </class>
 
    <!-- Multiple class tags can be added as well -->
-   <!-- Or a include tag can be added to reference files containing other class tags -->
+   <!-- Or an include tag can be added to reference files containing other class tags -->
    <!-- For example: <include file="..."/>  -->
 </si>
 ```
 *  **cell-converter**: The `cell-converter` is used to convert the value of a cell from a `String` to another type.
 In the above mapping, the builtin [NumberConverter](https://github.com/kossy18/moonshot/blob/master/service/import/src/main/java/com/andrea/service/importer/converters/NumberConverter.java)
 is used to convert a `String` to an Integer, Float, Double, Long, Byte or Short.
-To use a `cell-converter`, in your mapping, it must be declared first. Two converters with the same name should not be declared since
+To use a `cell-converter` in your mapping, it must be declared first. Two converters with the same name should not be declared since
 duplicate declarations will be overwritten by the latest one.
 The name of the `cell-converter` is optional. If not specified, the fully qualified name of the converter class will be used as the name.
 
@@ -148,7 +148,7 @@ The `property` can also contain a `columns` tag if additional cells need to be m
 or a `column` attribute, the document must contain a header whose name is equal to the name of the `property` because the name of the `property` will be
 used as the mapping value instead.
 The `property` can have an `order` attribute. The `order` attribute is used to guarantee the invocation of the `property` during the mapping process. 
-For example, consider the Java object below:
+For example, consider the Java class below:
 ```java
 public class Image {
     private URL url;
@@ -166,4 +166,64 @@ public class Image {
 During the mapping process, we will want the `setUrl` method to be called before the `setIcon` else, a NullPointerException will be
 thrown because the `url` will be null. This is where the `order` attribute comes into play. In the xml mapping, the `url` should have a higher `order`
 value than the `icon` property so that `setUrl` will be invoked first before `setIcon`. If no `order` is specified, 0 is assigned as the `order` and if
-two properties ave the same `order` value, the property's name will be used for the comparison.
+two properties have the same `order` value, the property's name will be used for the comparison.
+
+* **columns**: `columns` are used to map values from a document to a property. `columns` can contain one or more `column` tags.
+They are useful if a `property` is made up of multiple values from a document.
+In the xml example above, we can see that the price property is made up of the DIST and COST values in the csv.
+The ordering of the `column` tags also matter. If a `property-converter` is not be used to convert the multiple `column` values to a single
+one, the library will attempt to set each `column` value to the proper setter argument.
+For example, consider the method below:
+```java
+    ...
+    private String path;
+    private String description;
+
+    public void setIconInfo(String path, String description) {
+        this.path = path;
+        this.description = description;
+    }
+```
+and the corresponding xml mapping
+```xml
+    ...
+    <property name="iconInfo">
+        <columns>
+            <column name="path" />
+            <column name="desc" />
+        </columns>
+    </property>
+```
+In the case above, the `path` in the xml will be mapped to the first argument of the `setIconInfo` method while the `desc` will be 
+mapped to the second argument. The name of the `column` in this case is only used for mapping between the document and the setter arguments.
+
+After the xml mapping, majority of the configuration has been done. Next is to setup in Java.
+```Java
+    ...
+    ImporterConfig config = new ImporterConfig();
+    config.setXmlReader(new XmlReader(new XmlHandlerImpl()));
+    config.build(XML_MAPPING_PATH);
+```
+You create an instance of an `ImporterConfig`. The `ImporterConfig` is responsible for reading and validating if the xml is valid. It also
+reads the declared converters, classes and properties and creates a record of them for use later. So this should be done only once.
+
+```Java
+    ...
+    DocumentReaderFactory readerFactory = new DefaultDocumentReaderFactory();
+    RowSeeker seeker = readerFactory.createReader(ReaderType.CSV).read(new FileInputStream(CSV_FILE_PATH));
+    
+    EntityInfoProcessor processor = new EntityInfoProcessor<>(config);    
+    List<Product> products = processor.process(seeker, Product.class);
+    seeker.close();
+```
+After creating the `ImporterConfig`, next is to create a `DocumentReaderFactory` and specify what type of document is expected to be read.
+`DocumentReaderFactory` has a single method `createReader(ReaderType)` which creates a `RowSeeker`.
+A `RowSeeker` can be likened to `java.util.Iterator`. It's job is to transverse and read each row of the document. Each transversal of the 
+`RowSeeker` returns a `Row` or null if there are no more rows to be read. 
+A `Row` represents the physical row of the document. A `Row` also contains cells which represents the physical cells of a row.
+
+The `EntityInfoProcessor` wires everything together. It accepts the `ImporterConfig` to have access to the converters, classes and properties.
+It also accepts a `RowSeeker` which it uses to transverse the documents. With each row transversal, it creates a class object with uses
+reflection to set the properties of the classes as specified in the xml mapping. After the transversal, a `List` of the created objects are 
+returned.
+When done, the `RowSeeker` should be closed to release any system resources associated with the open streams.
