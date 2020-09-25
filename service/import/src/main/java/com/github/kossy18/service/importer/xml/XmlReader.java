@@ -60,6 +60,8 @@ public class XmlReader {
             }
         });
         SAXParser parser = factory.newSAXParser();
+        parser.setProperty("http://javax.xml.XMLConstants/property/accessExternalDTD", "");
+        parser.setProperty("http://javax.xml.XMLConstants/property/accessExternalSchema", "");
         parser.parse(FileUtils.getFileResourceAsStream(resource), (DefaultHandler) handler);
 
         Map<Class<?>, EntityInfo> infoMap = new HashMap<>();

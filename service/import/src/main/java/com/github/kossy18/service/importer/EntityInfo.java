@@ -10,16 +10,16 @@ import java.util.Objects;
 
 public final class EntityInfo {
 
-    private final Class clazz;
+    private final Class<?> clazz;
 
     private final List<Property> properties;
 
-    public EntityInfo(Class clazz, List<Property> properties) {
+    public EntityInfo(Class<?> clazz, List<Property> properties) {
         this.clazz = clazz;
         this.properties = properties;
     }
 
-    public Class getClazz() {
+    public Class<?> getClazz() {
         return clazz;
     }
 

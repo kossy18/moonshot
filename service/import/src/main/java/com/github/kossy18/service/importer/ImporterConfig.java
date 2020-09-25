@@ -90,6 +90,8 @@ public class ImporterConfig {
 
     public static void validateResource(String resource) throws IOException, SAXException {
         SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        schemaFactory.setProperty("http://javax.xml.XMLConstants/property/accessExternalDTD", "");
+        schemaFactory.setProperty("http://javax.xml.XMLConstants/property/accessExternalSchema", "");
         Schema schema = schemaFactory.newSchema(FileUtils.getFileResource(SCHEMA_FILE_NAME));
 
         Validator validator = schema.newValidator();
