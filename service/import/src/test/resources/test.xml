@@ -2,11 +2,11 @@
   ~ Copyright (c) 2020. Inyiama Kossy
   -->
 
-<si xmlns="http://andrea.com/schema/si">
-    <cell-converter name="numConverter" value="com.andrea.service.importer.converters.NumberConverter"/>
-    <property-converter name="priceConverter" value="com.andrea.service.importer.utils.PriceConverter"/>
+<si xmlns="http://github.com/kossy18/schema/si">
+    <cell-converter name="numConverter" value="com.github.kossy18.service.importer.converters.NumberConverter"/>
+    <property-converter name="priceConverter" value="com.github.kossy18.service.importer.utils.PriceConverter"/>
 
-    <class name="com.andrea.service.importer.entity.Product">
+    <class name="com.github.kossy18.service.importer.entity.Product">
         <property name="id">
             <columns>
                 <column name="id" converter-ref="numConverter" converter-data="long"/>
@@ -25,7 +25,7 @@
         </property>
     </class>
 
-    <class name="com.andrea.service.importer.entity.Product2">
+    <class name="com.github.kossy18.service.importer.entity.Product2">
         <property name="id">
             <columns>
                 <column name="id" converter-ref="numConverter" converter-data="long"/>

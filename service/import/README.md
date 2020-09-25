@@ -1,6 +1,6 @@
 # Importer
 
-This is a Java library which makes is easy to map values from documents to Java objects.
+This is a Java library which makes it easy to map values from documents to Java objects.
 
 ## Usage
 Consider the sample document below which can be a csv or spreadsheet document.
@@ -8,7 +8,7 @@ Consider the sample document below which can be a csv or spreadsheet document.
 | ID  | TITLE  | QTY    | COST  | DIST  | CODE  |  DESCRIPTION  |
 | --- | -----  | -----: | -----:| ----: | ----: | ------------  |
 | 1   | "Book" | 2.446  | 5.25  | 0.5   | 001   | "A nice book" |
-| 2   |  Pen   | 3      | 1.52  | 0.3   | 002   | "A blue pen"  |
+| 2   |  Pen   | 3      | 1.52  | 0.3   | 002   |  A blue pen   |
 
 ##### Mapping rows to a Java Bean
 First is to create a POJO, in this case, a Product class.
@@ -84,8 +84,8 @@ public class PriceConverter implements PropertyConverter {
 Next is to write the xml mapping
 
 ```xml
-<si xmlns="http://andrea.com/schema/si">
-    <cell-converter name="numConverter" value="com.andrea.service.importer.converters.NumberConverter"/>
+<si xmlns="http://github.com/kossy18/schema/si">
+    <cell-converter name="numConverter" value="com.github.kossy18.service.importer.converters.NumberConverter"/>
     <property-converter name="priceConverter" value="com...PriceConverter"/>
   
     <class name="com...Product">

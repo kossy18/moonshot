@@ -5,9 +5,9 @@
   -->
 
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns="http://andrea.com/schema/si"
-           xmlns:si="http://andrea.com/schema/si"
-           targetNamespace="http://andrea.com/schema/si"
+           xmlns="http://github.com/kossy18/schema/si"
+           xmlns:si="http://github.com/kossy18/schema/si"
+           targetNamespace="http://github.com/kossy18/schema/si"
            elementFormDefault="qualified"
            version="1.0">
 
